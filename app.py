@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 DATE_FIELD = "Date:T"
-SERIES_COLORS = ("#2563EB", "#F97316", "#059669", "#DC2626", "#9333EA")
+SERIES_COLORS = ("#4D8DFF", "#E6EC2B", "#23E033", "#E71111", "#9333EA")
 
 st.set_page_config(page_title="SLT forecasts", layout="wide")
 st.title("SLT ensemble learning dashboard")

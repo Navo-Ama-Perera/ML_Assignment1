@@ -8,7 +8,7 @@ DATE_FIELD = "Date:T"
 SERIES_COLORS = ("#4D8DFF", "#E6EC2B", "#23E033", "#E71111", "#9333EA")
 
 st.set_page_config(page_title="SLT forecasts", layout="wide")
-st.title("SLT ensemble learning dashboard")
+st.title("SLT Ensemble Learning Dashboard")
 st.caption("Sri Lanka Telecom · Next-trading-day closing price · LKR")
 
 dataset_path = Path(__file__).with_name("TeleCom_2009_2023_Daily.csv")

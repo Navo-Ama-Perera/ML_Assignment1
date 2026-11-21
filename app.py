@@ -4,12 +4,23 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+DATE_FIELD = "Date:T"
+
 st.set_page_config(page_title="SLT forecasts", layout="wide")
 st.title("SLT ensemble learning dashboard")
 st.caption("Sri Lanka Telecom · Next-trading-day closing price · LKR")
 
+dataset_path = Path(__file__).with_name("TeleCom_2009_2023_Daily.csv")
+if dataset_path.is_file():
+    st.download_button(
+        "Dataset: Download SLT daily prices (CSV)",
+        data=dataset_path.read_bytes(),
+        file_name=dataset_path.name,
+        mime="text/csv",
+    )
+
 experiments = {
-    "Bagging, boosting & stacking": "01_ensemble_predictions.csv",
+    "RF vs XGBoost & Stacking": "01_ensemble_predictions.csv",
     "ARIMA + Random Forest": "02_arima_rf_predictions.csv",
     "Random Forest + ANN": "03_rf_ann_predictions.csv",
 }
@@ -39,14 +50,24 @@ def show_experiment(filename):
     dates = values.index.tolist()
     day = st.selectbox("Explore a test trading day", dates, index=len(dates)-1,
                        format_func=lambda d: d.strftime("%d %b %Y"), key="day"+filename)
+    st.markdown(
+        """
+**How to use**
+
+- **Show forecasts** lets you choose which model lines appear. The **Actual** line shows the observed closing price.
+- **Previous close** is the baseline. Select it to compare the models with a simple forecast that uses the prior trading day's close.
+- **Explore a test trading day** lists the trading dates used to evaluate the models. Pick a date to mark it on the chart and see each forecast and its error for that day.
+- **Absolute error** is how far a forecast was from the actual close on the selected day. **MAE** is the average absolute error over all test dates. **RMSE** gives larger errors more weight. Lower values are better.
+"""
+    )
     chart_data = values[["Actual", *visible]].reset_index().melt(
         id_vars="Date", var_name="Series", value_name="Price"
     )
     chart = alt.Chart(chart_data).mark_line().encode(
-        x="Date:T", y=alt.Y("Price:Q", title="Closing price (LKR)", scale=alt.Scale(zero=False)),
-        color="Series:N", tooltip=["Date:T", "Series:N", "Price:Q"]
+        x=DATE_FIELD, y=alt.Y("Price:Q", title="Closing price (LKR)", scale=alt.Scale(zero=False)),
+        color="Series:N", tooltip=[DATE_FIELD, "Series:N", "Price:Q"]
     )
-    marker = alt.Chart(pd.DataFrame({"Date":[day]})).mark_rule(color="gray").encode(x="Date:T")
+    marker = alt.Chart(pd.DataFrame({"Date":[day]})).mark_rule(color="gray").encode(x=DATE_FIELD)
     st.altair_chart((chart + marker).interactive(), use_container_width=True)
     errors = values[models].sub(values["Actual"], axis=0)
     left, right = st.columns(2)

@@ -1,0 +1,68 @@
+from pathlib import Path
+
+import altair as alt
+import pandas as pd
+import streamlit as st
+
+st.set_page_config(page_title="SLT forecasts", layout="wide")
+st.title("SLT ensemble learning dashboard")
+st.caption("Sri Lanka Telecom · Next-trading-day closing price · LKR")
+
+experiments = {
+    "Bagging, boosting & stacking": "01_ensemble_predictions.csv",
+    "ARIMA + Random Forest": "02_arima_rf_predictions.csv",
+    "Random Forest + ANN": "03_rf_ann_predictions.csv",
+}
+
+def show_experiment(filename):
+    path = Path(__file__).parent / filename
+    source = path if path.is_file() else st.file_uploader(
+        f"Select {filename}", type="csv", key=filename
+    )
+    if source is None:
+        return
+    try:
+        frame = pd.read_csv(source)
+        if not {"Date", "Actual"}.issubset(frame):
+            raise ValueError("The export needs Date and Actual columns.")
+        frame["Date"] = pd.to_datetime(frame["Date"], errors="raise")
+        values = frame.set_index("Date").sort_index().apply(pd.to_numeric, errors="raise")
+        if values.empty or values.index.has_duplicates or values.index.hasnans or values.isna().any().any():
+            raise ValueError("Check the export for missing values, empty rows or duplicate dates.")
+        models = values.columns.drop("Actual").tolist()
+        if not models:
+            raise ValueError("Include at least one forecast column.")
+    except (ValueError, OSError) as error:
+        st.error(str(error))
+        return
+    visible = st.multiselect("Show forecasts", models, default=models, key="models"+filename)
+    dates = values.index.tolist()
+    day = st.selectbox("Explore a test trading day", dates, index=len(dates)-1,
+                       format_func=lambda d: d.strftime("%d %b %Y"), key="day"+filename)
+    chart_data = values[["Actual", *visible]].reset_index().melt(
+        id_vars="Date", var_name="Series", value_name="Price"
+    )
+    chart = alt.Chart(chart_data).mark_line().encode(
+        x="Date:T", y=alt.Y("Price:Q", title="Closing price (LKR)", scale=alt.Scale(zero=False)),
+        color="Series:N", tooltip=["Date:T", "Series:N", "Price:Q"]
+    )
+    marker = alt.Chart(pd.DataFrame({"Date":[day]})).mark_rule(color="gray").encode(x="Date:T")
+    st.altair_chart((chart + marker).interactive(), use_container_width=True)
+    errors = values[models].sub(values["Actual"], axis=0)
+    left, right = st.columns(2)
+    with left:
+        st.subheader("Selected trading day")
+        st.write(f"Actual close · LKR {values.at[day, 'Actual']:.2f}")
+        daily = pd.DataFrame({"Forecast (LKR)": values.loc[day, models],
+                              "Absolute error (LKR)": errors.loc[day].abs()})
+        st.dataframe(daily.sort_values("Absolute error (LKR)").round(3))
+    with right:
+        st.subheader("Full test period")
+        st.write(f"{len(dates)} trading days · {dates[0]:%d %b %Y} – {dates[-1]:%d %b %Y}")
+        scores = pd.DataFrame({"MAE (LKR)": errors.abs().mean(),
+                               "RMSE (LKR)": errors.pow(2).mean().pow(0.5)})
+        st.dataframe(scores.sort_values("MAE (LKR)").round(3))
+
+for tab, filename in zip(st.tabs(list(experiments)), experiments.values()):
+    with tab:
+        show_experiment(filename)

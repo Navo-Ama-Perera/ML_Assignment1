@@ -5,9 +5,10 @@ import pandas as pd
 import streamlit as st
 
 DATE_FIELD = "Date:T"
+SERIES_COLORS = ("#2563EB", "#F97316", "#059669", "#DC2626", "#9333EA")
 
 st.set_page_config(page_title="SLT forecasts", layout="wide")
-st.title("SLT Ensemble Learning Dashboard")
+st.title("SLT ensemble learning dashboard")
 st.caption("Sri Lanka Telecom · Next-trading-day closing price · LKR")
 
 dataset_path = Path(__file__).with_name("TeleCom_2009_2023_Daily.csv")
@@ -63,11 +64,24 @@ def show_experiment(filename):
     chart_data = values[["Actual", *visible]].reset_index().melt(
         id_vars="Date", var_name="Series", value_name="Price"
     )
+    date_axis = alt.X(DATE_FIELD, axis=alt.Axis(format="%b %Y"))
+    palette = dict(zip(["Actual", *models], SERIES_COLORS))
+    displayed_series = ["Actual", *visible]
+    if len(models) < len(SERIES_COLORS):
+        color_scale = alt.Scale(
+            domain=displayed_series,
+            range=[palette[name] for name in displayed_series],
+        )
+    else:
+        color_scale = alt.Scale(scheme="tableau20")
+
     chart = alt.Chart(chart_data).mark_line().encode(
-        x=DATE_FIELD, y=alt.Y("Price:Q", title="Closing price (LKR)", scale=alt.Scale(zero=False)),
-        color="Series:N", tooltip=[DATE_FIELD, "Series:N", "Price:Q"]
+        x=date_axis,
+        y=alt.Y("Price:Q", title="Closing price (LKR)", scale=alt.Scale(zero=False)),
+        color=alt.Color("Series:N", scale=color_scale),
+        tooltip=[DATE_FIELD, "Series:N", "Price:Q"],
     )
-    marker = alt.Chart(pd.DataFrame({"Date":[day]})).mark_rule(color="gray").encode(x=DATE_FIELD)
+    marker = alt.Chart(pd.DataFrame({"Date": [day]})).mark_rule(color="gray").encode(x=date_axis)
     st.altair_chart((chart + marker).interactive(), use_container_width=True)
     errors = values[models].sub(values["Actual"], axis=0)
     left, right = st.columns(2)

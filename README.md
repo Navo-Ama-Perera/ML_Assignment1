@@ -1,56 +1,79 @@
-# Forecasting Sri Lanka Telecom Closing Prices with Ensemble Learning
+# Forecasting Sri Lanka Telecom Share Prices with Ensemble Learning
 
-This project uses daily Sri Lanka Telecom (SLT) share prices from 2009 to 2023 to forecast the next trading day’s closing price in Sri Lankan rupees (LKR). Two Python notebooks train and evaluate the models. A Streamlit dashboard displays their forecasts so users can explore individual trading days and compare results across the full test period.
+This project uses historical Sri Lanka Telecom (SLT) share prices to forecast the next trading day’s closing price in Sri Lankan rupees (LKR). Two notebooks compare ensemble and hybrid models. An interactive dashboard lets users explore the forecasts for individual trading days and compare model performance across the full test period.
 
 [Open the Streamlit dashboard](https://ensemble-learning-dashboard-assign1.streamlit.app/) · [View the GitHub repository](https://github.com/Navo-Ama-Perera/ML_Assignment1)
 
 ## Dataset
 
-[Download the original daily SLT stock-price dataset](./TeleCom_2009_2023_Daily.csv?raw=true)
+[Download the SLT daily share-price dataset](https://raw.githubusercontent.com/Navo-Ama-Perera/ML_Assignment1/main/TeleCom_2009_2023_Daily.csv)
 
-The dataset contains 3,239 daily records with the date, closing price (`Price`), opening price, daily high and low, trading volume, and percentage change. Both notebooks use the date and closing price to prepare inputs such as earlier closing prices and moving averages. The target is the closing price on the next recorded trading day.
+The dataset contains 3,239 daily records from July 2009 to April 2023. It includes the trading date, closing price, opening price, daily high and low, volume, and percentage change.
 
-The earliest 80% of the prepared rows are used for model development. All models are evaluated on the same 646 trading days, from 28 July 2020 to 12 April 2023. The **previous-close baseline** uses the latest available closing price as the forecast for the next trading day.
+The notebooks use the date and closing price to create features such as earlier closing prices and moving averages. The target is the closing price on the next recorded trading day. The data is kept in date order so the models train on earlier observations and are tested on later ones.
+
+All models are evaluated on the same **646 trading days, from 28 July 2020 to 12 April 2023**. The **previous-close baseline** uses the latest available closing price as the forecast for the next trading day.
 
 ## What each notebook contains
 
-### [Notebook 1 — Random Forest, XGBoost and stacking](./01_RF_vs_XGBoost.ipynb)
+### [Notebook 1 — Random Forest, XGBoost and Stacking](./01_RF_vs_XGBoost.ipynb)
 
-- **Experiment 1 compares bagging and boosting.** Random Forest averages forecasts from independently trained trees. XGBoost builds trees in sequence, with each new tree helping to reduce the errors of the combined model.
-- **Experiment 2 tests stacking.** Linear Regression learns how to combine Random Forest and XGBoost forecasts. The combiner is trained on forecasts for a chronological validation period, using base models fitted on earlier dates.
-- The notebook compares all three methods with the previous-close baseline using error tables and actual-versus-predicted charts. Its research section compares Random Forest with XGBoost, LightGBM, and CatBoost and discusses tree ensembles for tabular, image, and text data.
+- **Bagging with Random Forest.** Several decision trees make forecasts independently, and their forecasts are averaged.
+- **Boosting with XGBoost.** Trees are added one at a time, with each new tree helping to reduce the errors of the combined model.
+- **Stacking with Linear Regression.** A Linear Regression model learns how to combine the Random Forest and XGBoost forecasts using a separate validation period. A regression model is suitable because the output is a numerical share price.
+- **Research comparison.** The notebook compares Random Forest with XGBoost, LightGBM, and CatBoost and discusses the strengths and limitations of tree ensembles for tabular, image, and text data.
 
-### [Notebook 2 — Hybrid forecasting models](./02_SLT_Hybrid_Models.ipynb)
+### [Notebook 2 — Hybrid Forecasting Models](./02_SLT_Hybrid_Models.ipynb)
 
-- **Experiment 1 tests ARIMA + Random Forest for time-series forecasting.** ARIMA forecasts the next closing price. Random Forest uses the five most recent ARIMA forecast errors to estimate a correction.
-- **Experiment 2 tests Random Forest + ANN for tabular regression.** Random Forest and an artificial neural network use the same price features. Their forecasts are averaged with a 50% weight for each model.
-- Each hybrid is compared with its individual models and the previous-close baseline on the same test dates.
+- **ARIMA + Random Forest for time-series forecasting.** ARIMA produces the initial price forecast. Random Forest uses the five most recent ARIMA forecast errors to estimate a correction.
+- **Random Forest + ANN for tabular regression.** Random Forest and an artificial neural network (ANN) each predict the closing price using the same price features. The final forecast is the average of the two predictions, giving each model a 50% weight.
 
-## Files used by the dashboard
+Each hybrid is compared with its individual models and the previous-close baseline.
 
-The notebooks export three forecast CSVs. Each contains the test date, actual closing price, baseline forecast, and model forecasts for one dashboard tab.
+## Dashboard files
 
-| File | Purpose |
+| File | What it contains |
 |---|---|
-| [`01_ensemble_predictions.csv`](./01_ensemble_predictions.csv) | Notebook 1 forecasts for Random Forest, XGBoost, and stacking |
-| [`02_arima_rf_predictions.csv`](./02_arima_rf_predictions.csv) | Notebook 2 forecasts for ARIMA, Random Forest, and ARIMA + RF |
-| [`03_rf_ann_predictions.csv`](./03_rf_ann_predictions.csv) | Notebook 2 forecasts for Random Forest, ANN, and their 50/50 average |
-| [`app.py`](./app.py) | Streamlit application that reads the forecast files and displays the three experiments |
-| [`requirements.txt`](./requirements.txt) | Python packages needed to run the dashboard |
+| [TeleCom_2009_2023_Daily.csv](./TeleCom_2009_2023_Daily.csv) | Original daily SLT share-price records |
+| [01_ensemble_predictions.csv](./01_ensemble_predictions.csv) | Actual prices and forecasts for the bagging, boosting, and stacking tab |
+| [02_arima_rf_predictions.csv](./02_arima_rf_predictions.csv) | Actual prices and forecasts for the ARIMA + Random Forest tab |
+| [03_rf_ann_predictions.csv](./03_rf_ann_predictions.csv) | Actual prices and forecasts for the Random Forest + ANN tab |
+| [app.py](./app.py) | Streamlit dashboard that reads the saved forecasts |
+| [requirements.txt](./requirements.txt) | Python packages needed to run the dashboard |
 
 ## How to use the dashboard
 
-1. Open the dashboard and choose one of the three experiment tabs.
-2. Choose which forecasts to display on the chart.
-3. Select a test trading day. **Selected trading day** shows the actual closing price, each forecast, and its absolute error in LKR.
-4. Read **Full test period** to compare performance across all 646 days. MAE is the average absolute error per share. RMSE gives greater weight to larger errors. Lower values indicate smaller errors.
+1. Open the dashboard and choose an experiment tab.
+2. Choose which forecasts to show on the price chart. Select **Previous close** to see how the models compare with using the previous trading day’s closing price.
+3. Select a test trading day. The **Selected trading day** table shows the actual close, each model’s forecast, and how far it was from the actual price.
+4. Use the **Full test period** table and the MAE and RMSE bar chart to compare models across all 646 days. Shorter bars mean smaller errors.
+5. Select a model in the **actual-versus-predicted scatter plot**. Each dot represents one test trading day. A dot on the dashed line means the forecast matched the actual close. Dots above the line are overestimates, and dots below it are underestimates.
+
+### How to read the scores
+
+| Metric | What it means |
+|---|---|
+| **MAE** | The average size of a forecast error in LKR per share. Lower is better. |
+| **RMSE** | An error measure in LKR per share that gives more weight to large misses. Lower is better. |
+| **R²** | Compares the model’s squared errors with using the mean actual price across the test period. A score of 1 is a perfect fit, 0 matches that reference, and a negative score is worse. |
 
 ## Main findings
 
-In Notebook 1, the previous-close baseline had the lowest MAE at LKR 1.166. Among the ensemble methods, Random Forest had an MAE of LKR 3.346, followed by XGBoost at LKR 3.390 and stacking at LKR 7.869.
+- **Ensemble comparison.** Random Forest had a slightly lower MAE than XGBoost (LKR 3.346 versus LKR 3.390). Stacking had the highest MAE at LKR 7.869. The previous-close baseline performed best in this experiment, with an MAE of LKR 1.166.
+- **ARIMA + Random Forest.** ARIMA alone had the lowest MAE across both notebooks at LKR 1.156, about one cent per share below the baseline. Adding the Random Forest correction increased MAE to LKR 1.190. The baseline still had the lowest RMSE at LKR 2.173.
+- **Random Forest + ANN.** The 50/50 average had an MAE of LKR 2.244. It improved on Random Forest alone (LKR 3.346), while ANN alone was more accurate (LKR 1.547).
 
-Across both notebooks, ARIMA had the lowest MAE at LKR 1.156, about one cent per share below the baseline. The previous-close baseline had the lowest RMSE at LKR 2.173. Averaging Random Forest and ANN improved on Random Forest alone, while ANN alone remained more accurate than their average.
+## Run the notebooks
 
-## Run the notebooks in Google Colab
+Open either notebook in Google Colab and run the cells from top to bottom. The updated dataset-loading cell reads the CSV directly from GitHub. If using a notebook version that asks for an upload, select the original dataset linked above.
 
-Open either notebook in Google Colab and run the cells in order. When prompted, upload `TeleCom_2009_2023_Daily.csv`. Each notebook generates its own forecast CSVs for the dashboard.
+## Run the dashboard locally
+
+Open a terminal in the project folder containing `app.py` and run:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+The dashboard reads the three saved prediction CSVs, so it can run without rerunning the notebooks.
